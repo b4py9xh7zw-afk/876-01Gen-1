@@ -81,6 +81,27 @@ router.post('/issue', (req, res) => {
   const existing = db.prepare('SELECT * FROM certificates WHERE student_id = ? AND course_id = ? AND status = \'active\'').get(student_id, course_id);
   if (existing) return res.status(409).json({ error: '该学员已有有效证书', certificate: existing });
 
+  const totalSessions = db.prepare('SELECT COUNT(*) AS cnt FROM sessions WHERE course_id = ?').get(course_id).cnt;
+  const attendedSessions = db.prepare(
+    "SELECT COUNT(*) AS cnt FROM attendance a JOIN sessions s ON s.id = a.session_id WHERE s.course_id = ? AND a.student_id = ? AND a.status IN ('present','late','makeup')"
+  ).get(course_id, student_id).cnt;
+
+  if (totalSessions > 0 && attendedSessions < totalSessions) {
+    return res.status(403).json({ error: `该学员未完成全部课次（${attendedSessions}/${totalSessions}），不能发放证书` });
+  }
+
+  const totalQuizzes = db.prepare('SELECT COUNT(*) AS cnt FROM quizzes WHERE course_id = ?').get(course_id).cnt;
+  if (totalQuizzes > 0) {
+    const passedQuizzes = db.prepare(
+      `SELECT COUNT(DISTINCT q.id) AS cnt FROM quizzes q
+       JOIN quiz_attempts qa ON qa.quiz_id = q.id
+       WHERE q.course_id = ? AND qa.student_id = ? AND qa.passed = 1`
+    ).get(course_id, student_id).cnt;
+    if (passedQuizzes < totalQuizzes) {
+      return res.status(403).json({ error: `该学员未通过全部测验（${passedQuizzes}/${totalQuizzes}），不能发放证书` });
+    }
+  }
+
   const id = uuid();
   const certNumber = generateCertNumber();
 

@@ -20,6 +20,7 @@ export default function CourseDetail() {
   const [quizzes, setQuizzes] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [certificates, setCertificates] = useState([]);
+  const [gradStatuses, setGradStatuses] = useState({});
 
   const [showSessionModal, setShowSessionModal] = useState(false);
   const [showQuizModal, setShowQuizModal] = useState(false);
@@ -58,6 +59,15 @@ export default function CourseDetail() {
       setQuizzes(qz);
       setTemplates(tmpl);
       setCertificates(certs);
+      if (stu.length > 0) {
+        const gs = {};
+        await Promise.all(stu.map(async s => {
+          try {
+            gs[s.id] = await api.students.getGraduationStatus(s.id, id);
+          } catch (e) { gs[s.id] = null; }
+        }));
+        setGradStatuses(gs);
+      }
     } catch (e) {
       console.error(e);
     }
@@ -161,7 +171,9 @@ export default function CourseDetail() {
     try {
       await api.certificates.issue({ student_id: studentId, course_id: id, template_id: tmplId });
       loadAll();
-    } catch (e) { alert(e.message); }
+    } catch (e) {
+      alert('发证失败: ' + e.message);
+    }
   }
 
   async function reissueCertificate() {
@@ -366,13 +378,25 @@ export default function CourseDetail() {
             </p>
             {enrolledStudents.map(s => {
               const hasCert = certificates.find(c => c.student_id === s.id && c.status === 'active');
+              const gs = gradStatuses[s.id];
+              const graduated = gs ? gs.graduated : false;
               return (
                 <div key={s.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--gray-100)' }}>
-                  <span style={{ fontSize: 14 }}>{s.name}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 14 }}>{s.name}</span>
+                    {gs && !graduated && (
+                      <span className="badge badge-failed" style={{ fontSize: 11 }}>未结业</span>
+                    )}
+                    {gs && graduated && (
+                      <span className="badge badge-passed" style={{ fontSize: 11 }}>已结业</span>
+                    )}
+                  </div>
                   {hasCert ? (
                     <span className="badge badge-active">已发证</span>
-                  ) : (
+                  ) : graduated ? (
                     <button className="btn btn-success btn-sm" onClick={() => issueCertificate(s.id)}>发放证书</button>
+                  ) : (
+                    <button className="btn btn-outline btn-sm" disabled style={{ opacity: 0.5, cursor: 'not-allowed' }}>未结业，不可发证</button>
                   )}
                 </div>
               );

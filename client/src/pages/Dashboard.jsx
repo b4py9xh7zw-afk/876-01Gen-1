@@ -14,6 +14,7 @@ export default function Dashboard() {
     try {
       const data = await api.dashboard();
       setStats(data);
+      if (data.courseCount > 0) setSeeded(true);
     } catch (e) {
       console.error(e);
     } finally {

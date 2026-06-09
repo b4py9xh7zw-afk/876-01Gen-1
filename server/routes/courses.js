@@ -24,7 +24,7 @@ router.post('/', (req, res) => {
   if (!name) return res.status(400).json({ error: '课程名称必填' });
   const id = uuid();
   db.prepare('INSERT INTO courses (id, organizer_id, name, description) VALUES (?, ?, ?, ?)')
-    .run(id, organizer_id || 'default', name, description || '');
+    .run(id, organizer_id || null, name, description || '');
   const course = db.prepare('SELECT * FROM courses WHERE id = ?').get(id);
   res.status(201).json(course);
 });

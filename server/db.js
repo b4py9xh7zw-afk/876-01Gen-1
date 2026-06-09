@@ -25,7 +25,7 @@ db.exec(`
 
   CREATE TABLE IF NOT EXISTS courses (
     id TEXT PRIMARY KEY,
-    organizer_id TEXT NOT NULL,
+    organizer_id TEXT,
     name TEXT NOT NULL,
     description TEXT DEFAULT '',
     status TEXT DEFAULT 'active',

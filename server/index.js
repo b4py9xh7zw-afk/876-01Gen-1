@@ -29,8 +29,13 @@ app.get('/api/dashboard', (req, res) => {
 
 app.post('/api/seed', (req, res) => {
   try {
+    const hasData = db.prepare('SELECT COUNT(*) AS cnt FROM courses').get().cnt > 0;
+    if (hasData) {
+      return res.json({ success: true, message: '已有课程数据，跳过初始化' });
+    }
+
     const organizerId = uuid();
-    db.prepare('INSERT OR IGNORE INTO organizers (id, name, email, password_hash) VALUES (?, ?, ?, ?)')
+    db.prepare('INSERT INTO organizers (id, name, email, password_hash) VALUES (?, ?, ?, ?)')
       .run(organizerId, '管理员', 'admin@training.com', 'hashed_password');
 
     const courseId = uuid();
